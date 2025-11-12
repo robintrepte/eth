@@ -21,20 +21,28 @@ export function SettingsPanel() {
   const [refreshInterval, setRefreshInterval] = useState(10);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
+  // Load settings on mount
   useEffect(() => {
     const saved = localStorage.getItem("arbitrage-settings");
     if (saved) {
       try {
         const settings = JSON.parse(saved);
-        setRefreshInterval(settings.refreshInterval || 10);
-        setAutoRefresh(settings.autoRefresh !== false);
+        // Use setTimeout to avoid setState in effect
+        setTimeout(() => {
+          if (settings.refreshInterval) {
+            setRefreshInterval(settings.refreshInterval);
+          }
+          if (settings.autoRefresh !== undefined) {
+            setAutoRefresh(settings.autoRefresh);
+          }
+        }, 0);
       } catch (e) {
         console.error("Error loading settings:", e);
       }
     }
   }, []);
 
-  const saveSettings = () => {
+  useEffect(() => {
     const settings = {
       refreshInterval,
       autoRefresh,
@@ -42,10 +50,6 @@ export function SettingsPanel() {
     localStorage.setItem("arbitrage-settings", JSON.stringify(settings));
     // Dispatch event for other components to listen
     window.dispatchEvent(new CustomEvent("settings-changed", { detail: settings }));
-  };
-
-  useEffect(() => {
-    saveSettings();
   }, [refreshInterval, autoRefresh]);
 
   return (

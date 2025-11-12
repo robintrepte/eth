@@ -7,7 +7,6 @@ import { useEffect, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
 
 interface ContractStatus {
   contractTotalTrades: bigint;
@@ -46,8 +45,9 @@ export function StatusDashboard() {
         canTrade: result.canTrade,
         contractWETHBalance: result.contractWETHBalance,
       });
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch status");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch status";
+      setError(message);
       console.error("Error fetching status:", err);
     } finally {
       setLoading(false);

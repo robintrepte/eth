@@ -19,8 +19,15 @@ export function TransactionStatusUpdater() {
       if (!saved) return;
 
       try {
-        const txs = JSON.parse(saved);
-        const pendingTxs = txs.filter((tx: any) => tx.status === "pending");
+        const txs = JSON.parse(saved) as Array<{
+          status: string;
+          hash: string;
+          type: string;
+          timestamp: number;
+          amount?: string;
+          gasUsed?: string;
+        }>;
+        const pendingTxs = txs.filter((tx) => tx.status === "pending");
 
         for (const tx of pendingTxs) {
           try {
@@ -28,12 +35,15 @@ export function TransactionStatusUpdater() {
             if (receipt) {
               // Transaction confirmed
               addTransaction({
-                ...tx,
+                hash: tx.hash,
+                type: tx.type as "deposit" | "withdraw" | "arbitrage" | "deploy",
                 status: receipt.status === 1 ? "confirmed" : "failed",
+                timestamp: tx.timestamp || Date.now(),
+                amount: tx.amount,
                 gasUsed: receipt.gasUsed?.toString(),
               });
             }
-          } catch (error) {
+          } catch {
             // Transaction might still be pending, ignore
           }
         }

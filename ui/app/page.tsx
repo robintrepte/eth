@@ -13,8 +13,7 @@ import { HelpDialog } from "@/components/help-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Activity, TrendingUp, Wallet, Zap, Rocket, Settings, HelpCircle, History } from "lucide-react";
+import { Activity, TrendingUp, Wallet, Zap, Rocket, History } from "lucide-react";
 
 export default function Home() {
   return (
@@ -152,7 +151,7 @@ export default function Home() {
             <div className="flex items-start gap-2">
               <span className="mt-1 text-primary">•</span>
               <p>
-                <strong className="text-foreground">Opportunities:</strong> Arbitrage opportunities are rare and competitive. It's normal to find none.
+                <strong className="text-foreground">Opportunities:</strong> Arbitrage opportunities are rare and competitive. It&apos;s normal to find none.
               </p>
             </div>
             <div className="flex items-start gap-2">

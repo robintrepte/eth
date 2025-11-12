@@ -2,7 +2,7 @@
 // Try to get from environment variable, fallback to empty string
 export const CONTRACT_ADDRESS = 
   (typeof window !== "undefined" 
-    ? (window as any).__CONTRACT_ADDRESS__ 
+    ? (window as { __CONTRACT_ADDRESS__?: string }).__CONTRACT_ADDRESS__ 
     : null) || 
   process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 
   "";

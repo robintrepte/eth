@@ -2,8 +2,9 @@
  * Better error handling utilities
  */
 
-export function parseError(error: any): { message: string; suggestion?: string } {
-  const errorMessage = error?.message || error?.reason || String(error) || "Unknown error";
+export function parseError(error: unknown): { message: string; suggestion?: string } {
+  const err = error as { message?: string; reason?: string } | null | undefined;
+  const errorMessage = err?.message || err?.reason || String(error) || "Unknown error";
   const errorStr = errorMessage.toLowerCase();
 
   // Common error patterns
@@ -77,7 +78,7 @@ export function parseError(error: any): { message: string; suggestion?: string }
   };
 }
 
-export function formatError(error: any): string {
+export function formatError(error: unknown): string {
   const parsed = parseError(error);
   if (parsed.suggestion) {
     return `${parsed.message}\n\n${parsed.suggestion}`;

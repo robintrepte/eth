@@ -48,7 +48,7 @@ export function HelpDialog() {
               <h3 className="font-semibold text-base mt-4">Setting Up MetaMask</h3>
               <ol className="list-decimal list-inside space-y-2 ml-2">
                 <li>Open MetaMask and click the network dropdown</li>
-                <li>Select "Add Network" or "Add a network manually"</li>
+                <li>Select &quot;Add Network&quot; or &quot;Add a network manually&quot;</li>
                 <li>Enter these details:
                   <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
                     <li>Network Name: <code className="bg-muted px-1 rounded">Hardhat Local</code></li>
@@ -108,25 +108,25 @@ export function HelpDialog() {
           <TabsContent value="faq" className="space-y-4 mt-4">
             <div className="space-y-4 text-sm">
               <div>
-                <h3 className="font-semibold text-base">Why can't I find opportunities?</h3>
+                <h3 className="font-semibold text-base">Why can&apos;t I find opportunities?</h3>
                 <p className="text-muted-foreground mt-1">
-                  Arbitrage opportunities are rare and highly competitive. It's normal to find none,
+                  Arbitrage opportunities are rare and highly competitive. It&apos;s normal to find none,
                   especially on a mainnet fork where prices may not have real-time updates.
                 </p>
               </div>
 
               <div>
-                <h3 className="font-semibold text-base">Why can't I execute trades?</h3>
+                <h3 className="font-semibold text-base">Why can&apos;t I execute trades?</h3>
                 <p className="text-muted-foreground mt-1">
-                  Only the contract deployer (operator) can execute trades. Make sure you're using
+                  Only the contract deployer (operator) can execute trades. Make sure you&apos;re using
                   the same account that deployed the contract.
                 </p>
               </div>
 
               <div>
-                <h3 className="font-semibold text-base">What if the Hardhat node isn't running?</h3>
+                <h3 className="font-semibold text-base">What if the Hardhat node isn&apos;t running?</h3>
                 <p className="text-muted-foreground mt-1">
-                  The deploy tab will show the node status. If it's not running, restart with
+                  The deploy tab will show the node status. If it&apos;s not running, restart with
                   <code className="bg-muted px-1 rounded ml-1">npm start</code> or manually with
                   <code className="bg-muted px-1 rounded ml-1">npm run node</code>.
                 </p>

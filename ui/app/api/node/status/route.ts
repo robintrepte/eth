@@ -27,10 +27,11 @@ export async function GET() {
         error: "Node not responding",
       });
     }
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Node not accessible";
     return NextResponse.json({
       running: false,
-      error: error.message || "Node not accessible",
+      error: message,
     });
   }
 }

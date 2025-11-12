@@ -79,7 +79,7 @@ export function ArbitrageExecute() {
       toast.success("Arbitrage executed successfully!");
       setShowConfirm(false);
       console.log("Transaction receipt:", receipt);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Execute error:", error);
       const parsed = parseError(error);
       toast.error(parsed.message, {

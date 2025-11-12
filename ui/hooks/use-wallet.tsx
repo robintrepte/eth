@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { ethers } from "ethers";
-import { connectWallet, getLocalhostProvider, getContract } from "@/lib/ethers-utils";
+import { connectWallet, getContract } from "@/lib/ethers-utils";
 
 interface WalletContextType {
   address: string | null;
@@ -30,8 +30,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setAddress(newAddress);
       
       // Get contract address from environment or window
+      const windowContract = typeof window !== "undefined"
+        ? (window as { __CONTRACT_ADDRESS__?: string }).__CONTRACT_ADDRESS__
+        : undefined;
       const contractAddress = 
-        (typeof window !== "undefined" && (window as any).__CONTRACT_ADDRESS__) ||
+        windowContract ||
         process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
         "";
       
@@ -39,7 +42,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const contractInstance = getContract(newSigner, contractAddress);
         setContract(contractInstance);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to connect wallet:", error);
       throw error;
     }
@@ -54,41 +57,47 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check if already connected
-    if (typeof window !== "undefined" && (window as any).ethereum) {
-      const checkConnection = async () => {
-        try {
-          const provider = new ethers.BrowserProvider((window as any).ethereum);
-          const accounts = await provider.listAccounts();
-          if (accounts.length > 0) {
-            const signer = await provider.getSigner();
-            setProvider(provider);
-            setSigner(signer);
-            setAddress(await signer.getAddress());
-            
-            // Get contract address
-            const contractAddress = 
-              (window as any).__CONTRACT_ADDRESS__ ||
-              process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
-              "";
-            
-            if (contractAddress) {
-              setContract(getContract(signer, contractAddress));
+    if (typeof window !== "undefined") {
+      const ethereum = (window as { ethereum?: { on?: (event: string, handler: (accounts: string[]) => void) => void; request?: unknown } }).ethereum;
+      if (ethereum) {
+        const checkConnection = async () => {
+          try {
+            const provider = new ethers.BrowserProvider(ethereum as ethers.Eip1193Provider);
+            const accounts = await provider.listAccounts();
+            if (accounts.length > 0) {
+              const signer = await provider.getSigner();
+              setProvider(provider);
+              setSigner(signer);
+              setAddress(await signer.getAddress());
+              
+              // Get contract address
+              const windowContract = (window as { __CONTRACT_ADDRESS__?: string }).__CONTRACT_ADDRESS__;
+              const contractAddress = 
+                windowContract ||
+                process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
+                "";
+              
+              if (contractAddress) {
+                setContract(getContract(signer, contractAddress));
+              }
             }
+          } catch (error) {
+            console.error("Error checking connection:", error);
           }
-        } catch (error) {
-          console.error("Error checking connection:", error);
-        }
-      };
-      checkConnection();
+        };
+        checkConnection();
 
-      // Listen for account changes
-      (window as any).ethereum.on("accountsChanged", (accounts: string[]) => {
-        if (accounts.length === 0) {
-          disconnect();
-        } else {
-          checkConnection();
+        // Listen for account changes
+        if (ethereum.on) {
+          ethereum.on("accountsChanged", (accounts: string[]) => {
+            if (accounts.length === 0) {
+              disconnect();
+            } else {
+              checkConnection();
+            }
+          });
         }
-      });
+      }
     }
   }, []);
 

@@ -19,7 +19,7 @@ interface Transaction {
 }
 
 export function TransactionHistory() {
-  const { provider, isConnected } = useWallet();
+  const { isConnected } = useWallet();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
@@ -35,11 +35,33 @@ export function TransactionHistory() {
   };
 
   useEffect(() => {
+    // Load transactions on mount
+    const loadTransactions = () => {
+      const saved = localStorage.getItem("arbitrage-transactions");
+      if (saved) {
+        try {
+          const txs = JSON.parse(saved);
+          // Use setTimeout to avoid setState in effect
+          setTimeout(() => setTransactions(txs), 0);
+        } catch (e) {
+          console.error("Error loading transactions:", e);
+        }
+      }
+    };
+    
     loadTransactions();
     
     // Listen for new transactions
     const handleStorageChange = () => {
-      loadTransactions();
+      const saved = localStorage.getItem("arbitrage-transactions");
+      if (saved) {
+        try {
+          const txs = JSON.parse(saved);
+          setTransactions(txs);
+        } catch (e) {
+          console.error("Error loading transactions:", e);
+        }
+      }
     };
     
     // Listen for custom event when transactions are added

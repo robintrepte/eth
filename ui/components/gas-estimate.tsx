@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useWallet } from "@/hooks/use-wallet";
 import { formatEther } from "@/lib/ethers-utils";
 import { useState, useEffect } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert } from "@/components/ui/alert";
 import { Loader2, Zap } from "lucide-react";
 
 interface GasEstimateProps {

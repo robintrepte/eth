@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWallet } from "@/hooks/use-wallet";
-import { parseEther, formatEther } from "@/lib/ethers-utils";
-import { parseError, formatError } from "@/lib/error-handler";
+import { parseEther } from "@/lib/ethers-utils";
+import { parseError } from "@/lib/error-handler";
 import { addTransaction } from "@/components/transaction-history";
 import { GasEstimate } from "@/components/gas-estimate";
 import { useState } from "react";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function DepositWithdraw() {
-  const { contract, isConnected, provider } = useWallet();
+  const { contract, isConnected } = useWallet();
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [depositing, setDepositing] = useState(false);
@@ -74,7 +74,7 @@ export function DepositWithdraw() {
       toast.success(`Successfully deposited ${depositAmount} ETH`);
       setDepositAmount("");
       setShowDepositConfirm(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Deposit error:", error);
       const parsed = parseError(error);
       toast.error(parsed.message, {
@@ -125,7 +125,7 @@ export function DepositWithdraw() {
       toast.success(`Successfully withdrew ${withdrawAmount} ETH`);
       setWithdrawAmount("");
       setShowWithdrawConfirm(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Withdraw error:", error);
       const parsed = parseError(error);
       toast.error(parsed.message, {

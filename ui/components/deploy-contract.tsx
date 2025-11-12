@@ -12,7 +12,7 @@ import { CopyButton } from "@/components/copy-button";
 import { addTransaction } from "@/components/transaction-history";
 
 export function DeployContract() {
-  const { isConnected } = useWallet();
+  const { } = useWallet();
   const [deploying, setDeploying] = useState(false);
   const [nodeStatus, setNodeStatus] = useState<{
     running: boolean;
@@ -26,7 +26,7 @@ export function DeployContract() {
       const response = await fetch("/api/node/status");
       const data = await response.json();
       setNodeStatus(data);
-    } catch (error) {
+    } catch {
       setNodeStatus({ running: false, error: "Failed to check node status" });
     }
   };
@@ -39,11 +39,11 @@ export function DeployContract() {
         setContractAddress(data.contractAddress);
         // Set in window for immediate use
         if (typeof window !== "undefined") {
-          (window as any).__CONTRACT_ADDRESS__ = data.contractAddress;
+          (window as unknown as Record<string, unknown>).__CONTRACT_ADDRESS__ = data.contractAddress;
         }
       }
-    } catch (error) {
-      console.error("Error checking deployment:", error);
+    } catch {
+      // Silently handle error
     } finally {
       setChecking(false);
     }
@@ -85,20 +85,21 @@ export function DeployContract() {
         
         // Set contract address in window for immediate use
         if (typeof window !== "undefined") {
-          (window as any).__CONTRACT_ADDRESS__ = data.contractAddress;
+          (window as unknown as Record<string, unknown>).__CONTRACT_ADDRESS__ = data.contractAddress;
         }
         
         // Reload to pick up new env variable
         setTimeout(() => {
           if (typeof window !== "undefined") {
-            (window as any).location.reload();
+            window.location.reload();
           }
         }, 2000);
       } else {
         toast.error(data.error || "Deployment failed");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Deployment failed");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Deployment failed";
+      toast.error(message);
     } finally {
       setDeploying(false);
     }

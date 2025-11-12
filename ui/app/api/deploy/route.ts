@@ -20,7 +20,7 @@ export async function POST() {
     }
 
     // Run deployment
-    const { stdout, stderr } = await execAsync(
+    const { stdout } = await execAsync(
       `npx hardhat run scripts/deploy.js --network localhost`,
       {
         cwd: projectRoot,
@@ -55,13 +55,14 @@ export async function POST() {
       contractAddress,
       message: "Contract deployed successfully",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Deployment error:", error);
+    const err = error as { message?: string; stderr?: string; stdout?: string };
     return NextResponse.json(
       {
-        error: error.message || "Deployment failed",
-        stderr: error.stderr,
-        stdout: error.stdout,
+        error: err.message || "Deployment failed",
+        stderr: err.stderr,
+        stdout: err.stdout,
       },
       { status: 500 }
     );

@@ -17,7 +17,18 @@ export function OpportunitySearch() {
   const { contract, isConnected } = useWallet();
   const [searchAmount, setSearchAmount] = useState("1.0");
   const [searching, setSearching] = useState(false);
-  const [opportunity, setOpportunity] = useState<any>(null);
+  const [opportunity, setOpportunity] = useState<{
+    isValid: boolean;
+    tokenA: string;
+    tokenB: string;
+    amount: bigint;
+    expectedProfit: bigint;
+    dexIn: number;
+    dexOut: number;
+    minOutLeg1: bigint;
+    minOutLeg2: bigint;
+    gasEstimate: bigint;
+  } | null>(null);
 
   const handleSearch = async () => {
     if (!contract || !isConnected) {
@@ -55,7 +66,7 @@ export function OpportunitySearch() {
       } else {
         toast.info("No profitable opportunity found");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Search error:", error);
       const parsed = parseError(error);
       toast.error(parsed.message, {

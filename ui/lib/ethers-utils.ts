@@ -4,7 +4,9 @@ import { LOCALHOST_RPC, CHAIN_ID } from "./contract-config";
 
 export function getProvider() {
   if (typeof window === "undefined") return null;
-  return new ethers.BrowserProvider((window as any).ethereum);
+  const ethereum = (window as { ethereum?: unknown }).ethereum;
+  if (!ethereum) return null;
+  return new ethers.BrowserProvider(ethereum as ethers.Eip1193Provider);
 }
 
 export function getLocalhostProvider() {
@@ -13,9 +15,12 @@ export function getLocalhostProvider() {
 
 export function getContract(signerOrProvider: ethers.Signer | ethers.Provider, contractAddress?: string) {
   // Get contract address from parameter, environment, or window
+  const windowContract = typeof window !== "undefined" 
+    ? (window as { __CONTRACT_ADDRESS__?: string }).__CONTRACT_ADDRESS__
+    : undefined;
   const address = 
     contractAddress ||
-    (typeof window !== "undefined" && (window as any).__CONTRACT_ADDRESS__) ||
+    windowContract ||
     process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
     "";
     
@@ -26,11 +31,15 @@ export function getContract(signerOrProvider: ethers.Signer | ethers.Provider, c
 }
 
 export async function connectWallet() {
-  if (typeof window === "undefined" || !(window as any).ethereum) {
+  if (typeof window === "undefined") {
+    throw new Error("MetaMask not available");
+  }
+  const ethereum = (window as { ethereum?: unknown }).ethereum;
+  if (!ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const provider = new ethers.BrowserProvider((window as any).ethereum);
+  const provider = new ethers.BrowserProvider(ethereum as ethers.Eip1193Provider);
   
   // Request account access
   await provider.send("eth_requestAccounts", []);
@@ -43,9 +52,10 @@ export async function connectWallet() {
       await provider.send("wallet_switchEthereumChain", [
         { chainId: `0x${CHAIN_ID.toString(16)}` },
       ]);
-    } catch (switchError: any) {
+    } catch (switchError) {
+      const err = switchError as { code?: number };
       // If the network doesn't exist, add it
-      if (switchError.code === 4902) {
+      if (err.code === 4902) {
         await provider.send("wallet_addEthereumChain", [
           {
             chainId: `0x${CHAIN_ID.toString(16)}`,

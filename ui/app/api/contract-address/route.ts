@@ -24,9 +24,10 @@ export async function GET() {
       contractAddress,
       configured: !!contractAddress,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: error.message },
+      { error: message },
       { status: 500 }
     );
   }
