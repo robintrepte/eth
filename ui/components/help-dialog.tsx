@@ -67,7 +67,9 @@ export function HelpDialog() {
               <div>
                 <h3 className="font-semibold text-base">Deploy Tab</h3>
                 <p className="text-muted-foreground mt-1">
-                  Deploy the contract to the local Hardhat node. Shows node status and deployment progress.
+                  Deploy V1 (original) or V2 (enhanced) contract to the local Hardhat node. 
+                  V2 includes triangle arbitrage, more tokens (LINK, UNI, AAVE), gas optimization, and enhanced limits.
+                  Shows node status and deployment progress.
                 </p>
               </div>
 
@@ -75,15 +77,24 @@ export function HelpDialog() {
                 <h3 className="font-semibold text-base">Manage Funds Tab</h3>
                 <p className="text-muted-foreground mt-1">
                   Deposit ETH (converts to WETH) or withdraw WETH (converts to ETH) from the contract.
-                  Includes gas estimation and confirmation dialogs.
+                  Operator only. Includes gas estimation and confirmation dialogs for safety.
                 </p>
+                <div className="mt-2">
+                  <h4 className="font-semibold text-sm">Contract Settings (V2 Only)</h4>
+                  <ul className="list-disc list-inside ml-2 mt-1 space-y-1 text-muted-foreground">
+                    <li>Toggle triangle arbitrage on/off</li>
+                    <li>Set gas price hint for profit calculations</li>
+                    <li>Configure flash loan premium (BPS)</li>
+                  </ul>
+                </div>
               </div>
 
               <div>
                 <h3 className="font-semibold text-base">Find Opportunities Tab</h3>
                 <p className="text-muted-foreground mt-1">
                   Search for profitable arbitrage opportunities across multiple DEXes.
-                  Shows detailed information about any opportunities found.
+                  V2 can find both 2-leg and 3-leg (triangle) arbitrage routes.
+                  Shows detailed information including expected profit, DEX routes, and gas estimates.
                 </p>
               </div>
 
@@ -91,7 +102,8 @@ export function HelpDialog() {
                 <h3 className="font-semibold text-base">Execute Trade Tab</h3>
                 <p className="text-muted-foreground mt-1">
                   Execute arbitrage trades automatically. Operator only - requires deployer account.
-                  Includes gas estimation and confirmation.
+                  Automatically finds the best opportunity and executes if profitable.
+                  Includes gas estimation and confirmation dialog.
                 </p>
               </div>
 
@@ -99,7 +111,15 @@ export function HelpDialog() {
                 <h3 className="font-semibold text-base">History Tab</h3>
                 <p className="text-muted-foreground mt-1">
                   View your recent transactions with status, amounts, and transaction hashes.
-                  Copy transaction hashes to clipboard.
+                  Copy transaction hashes to clipboard. Auto-updates with transaction status.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-base">Status Dashboard</h3>
+                <p className="text-muted-foreground mt-1">
+                  Real-time contract statistics including total trades, volume, profit, and balance.
+                  V2 shows additional triangle arbitrage count. Auto-refreshes based on settings.
                 </p>
               </div>
             </div>
@@ -144,7 +164,23 @@ export function HelpDialog() {
                 <h3 className="font-semibold text-base">How do I change settings?</h3>
                 <p className="text-muted-foreground mt-1">
                   Click the settings icon in the header to configure refresh intervals, theme,
-                  and other preferences.
+                  and other preferences. Contract settings (V2) are in the Manage tab.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-base">What&apos;s the difference between V1 and V2?</h3>
+                <p className="text-muted-foreground mt-1">
+                  V2 is an enhanced version with triangle arbitrage (3-leg routes), more supported tokens,
+                  optimized gas costs, lower profit thresholds, and higher limits. V1 is the original stable version.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-base">What is triangle arbitrage?</h3>
+                <p className="text-muted-foreground mt-1">
+                  Triangle arbitrage uses 3 trades instead of 2: A → B → C → A. This can find opportunities
+                  that 2-leg arbitrage misses. Example: WETH → USDC → DAI → WETH.
                 </p>
               </div>
             </div>

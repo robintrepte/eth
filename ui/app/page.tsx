@@ -9,6 +9,7 @@ import { DeployContract } from "@/components/deploy-contract";
 import { TransactionHistory } from "@/components/transaction-history";
 import { TransactionStatusUpdater } from "@/components/transaction-status-updater";
 import { SettingsPanel } from "@/components/settings-panel";
+import { ContractSettings } from "@/components/contract-settings";
 import { HelpDialog } from "@/components/help-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,6 +107,7 @@ export default function Home() {
 
           <TabsContent value="manage" className="space-y-4">
             <DepositWithdraw />
+            <ContractSettings />
           </TabsContent>
 
           <TabsContent value="search" className="space-y-4">
@@ -158,6 +160,18 @@ export default function Home() {
               <span className="mt-1 text-primary">•</span>
               <p>
                 <strong className="text-foreground">Safe Testing:</strong> All operations use fake ETH on a local fork - no real funds at risk.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="mt-1 text-primary">•</span>
+              <p>
+                <strong className="text-foreground">V2 Features:</strong> Enhanced contract with triangle arbitrage, more tokens, and optimized gas costs.
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="mt-1 text-primary">•</span>
+              <p>
+                <strong className="text-foreground">Help:</strong> Click the help icon (?) in the header for detailed guides and FAQs.
               </p>
             </div>
           </CardContent>

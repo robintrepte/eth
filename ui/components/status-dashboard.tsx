@@ -12,6 +12,7 @@ interface ContractStatus {
   contractTotalTrades: bigint;
   contractTotalVolume: bigint;
   contractTotalProfit: bigint;
+  contractTriangleArbs?: bigint; // V2 only
   userFlashLoansToday: bigint;
   userRemainingCooldown: bigint;
   userDailyLimit: bigint;
@@ -39,6 +40,7 @@ export function StatusDashboard() {
         contractTotalTrades: result.contractTotalTrades,
         contractTotalVolume: result.contractTotalVolume,
         contractTotalProfit: result.contractTotalProfit,
+        contractTriangleArbs: result.contractTriangleArbs, // V2 only, may be undefined
         userFlashLoansToday: result.userFlashLoansToday,
         userRemainingCooldown: result.userRemainingCooldown,
         userDailyLimit: result.userDailyLimit,
@@ -93,11 +95,15 @@ export function StatusDashboard() {
 
   if (!isConnected) {
     return (
-      <Alert>
-        <AlertDescription>
-          Please connect your wallet to view contract status.
-        </AlertDescription>
-      </Alert>
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center p-8 space-y-2">
+          <Alert>
+            <AlertDescription className="text-center">
+              Please connect your wallet to view contract status and statistics.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -203,6 +209,21 @@ export function StatusDashboard() {
           <p className="mt-1 text-xs text-muted-foreground">Time until next flash loan</p>
         </CardContent>
       </Card>
+
+      {status.contractTriangleArbs !== undefined && (
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Triangle Arbs</CardTitle>
+            <Badge variant="secondary" className="text-xs">V2</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold tracking-tight">
+              {status.contractTriangleArbs.toString()}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">3-leg arbitrage trades</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="transition-all hover:shadow-md sm:col-span-2 lg:col-span-2">
         <CardHeader>

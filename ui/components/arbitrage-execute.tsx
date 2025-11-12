@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function ArbitrageExecute() {
-  const { contract, isConnected } = useWallet();
+  const { contract, isConnected, isOperator } = useWallet();
   const [maxAmount, setMaxAmount] = useState("1.0");
   const [gasLimit, setGasLimit] = useState("500000");
   const [executing, setExecuting] = useState(false);
@@ -90,6 +90,8 @@ export function ArbitrageExecute() {
     }
   };
 
+  const { isOperator } = useWallet();
+
   if (!isConnected) {
     return (
       <Card>
@@ -97,6 +99,25 @@ export function ArbitrageExecute() {
           <CardTitle>Execute Arbitrage</CardTitle>
           <CardDescription>Connect your wallet to execute arbitrage trades</CardDescription>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (!isOperator) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Execute Arbitrage</CardTitle>
+          <CardDescription>Operator access required</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertDescription>
+              Only the contract operator (deployer) can execute arbitrage trades.
+              Please connect with the account that deployed the contract.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
       </Card>
     );
   }
@@ -115,8 +136,15 @@ export function ArbitrageExecute() {
       <CardContent className="space-y-4">
         <Alert>
           <AlertDescription>
-            <strong>Operator Only:</strong> Only the contract deployer (operator) can execute arbitrage trades.
-            This function will search for opportunities and execute them automatically if profitable.
+            <div className="space-y-2">
+              <p>
+                <strong>Operator Only:</strong> Only the contract deployer (operator) can execute arbitrage trades.
+              </p>
+              <p className="text-xs">
+                This function will automatically search for the best opportunity and execute it if profitable.
+                It considers gas costs, flash loan premiums, and minimum profit thresholds.
+              </p>
+            </div>
           </AlertDescription>
         </Alert>
 
@@ -131,6 +159,9 @@ export function ArbitrageExecute() {
             onChange={(e) => setMaxAmount(e.target.value)}
             disabled={executing}
           />
+          <p className="text-xs text-muted-foreground">
+            Maximum amount to trade. The bot will find the optimal amount within this limit.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -172,10 +203,25 @@ export function ArbitrageExecute() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Arbitrage Execution</AlertDialogTitle>
-              <AlertDialogDescription>
-                You are about to execute an arbitrage trade with a maximum amount of {maxAmount} ETH.
-                This will automatically search for and execute profitable opportunities. Gas limit: {parseInt(gasLimit).toLocaleString()}.
-                Are you sure you want to continue?
+              <AlertDialogDescription className="space-y-2">
+                <p>
+                  You are about to execute an arbitrage trade with a maximum amount of <strong>{maxAmount} ETH</strong>.
+                </p>
+                <p>
+                  This will automatically:
+                </p>
+                <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                  <li>Search for profitable opportunities across all DEXes</li>
+                  <li>Calculate optimal trade amount and route</li>
+                  <li>Execute the trade if profit exceeds gas costs</li>
+                  <li>Use flash loans if needed (or own liquidity if available)</li>
+                </ul>
+                <p className="mt-2">
+                  Estimated gas limit: <strong>{parseInt(gasLimit).toLocaleString()}</strong>
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Only proceeds if a profitable opportunity is found.
+                </p>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

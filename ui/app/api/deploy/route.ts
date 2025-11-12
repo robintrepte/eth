@@ -6,31 +6,37 @@ import fs from "fs";
 
 const execAsync = promisify(exec);
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const body = await request.json().catch(() => ({}));
+    const version = body.version || "v1"; // Default to v1 for backward compatibility
+    
     const projectRoot = path.join(process.cwd(), "..");
-    const deployScript = path.join(projectRoot, "scripts", "deploy.js");
+    const deployScript = version === "v2" 
+      ? path.join(projectRoot, "scripts", "deploy-v2.js")
+      : path.join(projectRoot, "scripts", "deploy.js");
 
     // Check if deploy script exists
     if (!fs.existsSync(deployScript)) {
       return NextResponse.json(
-        { error: "Deploy script not found" },
+        { error: `Deploy script not found for ${version}` },
         { status: 404 }
       );
     }
 
     // Run deployment
+    const scriptName = version === "v2" ? "deploy-v2.js" : "deploy.js";
     const { stdout } = await execAsync(
-      `npx hardhat run scripts/deploy.js --network localhost`,
+      `npx hardhat run scripts/${scriptName} --network localhost`,
       {
         cwd: projectRoot,
         timeout: 60000, // 60 second timeout
       }
     );
 
-    // Extract contract address from output
+    // Extract contract address from output (supports both V1 and V2)
     const addressMatch = stdout.match(
-      /TrustlessArbitrageBot deployed to: (0x[a-fA-F0-9]{40})/i
+      /TrustlessArbitrageBot(V2)? deployed to: (0x[a-fA-F0-9]{40})/i
     );
 
     if (!addressMatch) {
@@ -43,17 +49,18 @@ export async function POST() {
       );
     }
 
-    const contractAddress = addressMatch[1];
+    const contractAddress = addressMatch[2] || addressMatch[1];
 
     // Save to .env.local
     const envFile = path.join(process.cwd(), ".env.local");
-    const envContent = `NEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}\n`;
+    const envContent = `NEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}\nNEXT_PUBLIC_CONTRACT_VERSION=${version}\n`;
     fs.writeFileSync(envFile, envContent);
 
     return NextResponse.json({
       success: true,
       contractAddress,
-      message: "Contract deployed successfully",
+      version,
+      message: `Contract ${version} deployed successfully`,
     });
   } catch (error) {
     console.error("Deployment error:", error);

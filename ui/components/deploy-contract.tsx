@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useWallet } from "@/hooks/use-wallet";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -56,6 +57,8 @@ export function DeployContract() {
     return () => clearInterval(interval);
   }, []);
 
+  const [contractVersion, setContractVersion] = useState<"v1" | "v2">("v2");
+
   const handleDeploy = async () => {
     if (!nodeStatus?.running) {
       toast.error("Hardhat node is not running. Please start it first.");
@@ -66,18 +69,21 @@ export function DeployContract() {
     try {
       const response = await fetch("/api/deploy", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ version: contractVersion }),
       });
 
       const data = await response.json();
 
       if (data.success && data.contractAddress) {
-        toast.success(`Contract deployed: ${data.contractAddress}`);
+        toast.success(`Contract ${contractVersion.toUpperCase()} deployed: ${data.contractAddress}`);
         setContractAddress(data.contractAddress);
         
-        // Add deployment to transaction history (if we had a tx hash, we'd use it)
-        // For now, we'll track it as a deploy event
+        // Add deployment to transaction history
         addTransaction({
-          hash: `deploy-${Date.now()}`, // Placeholder hash for deployment
+          hash: `deploy-${Date.now()}`,
           type: "deploy",
           status: "confirmed",
           timestamp: Date.now(),
@@ -86,6 +92,7 @@ export function DeployContract() {
         // Set contract address in window for immediate use
         if (typeof window !== "undefined") {
           (window as unknown as Record<string, unknown>).__CONTRACT_ADDRESS__ = data.contractAddress;
+          (window as unknown as Record<string, unknown>).__CONTRACT_VERSION__ = contractVersion;
         }
         
         // Reload to pick up new env variable
@@ -127,6 +134,45 @@ export function DeployContract() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Version Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="contract-version" className="text-sm font-medium">Contract Version</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={contractVersion === "v1" ? "default" : "outline"}
+              onClick={() => setContractVersion("v1")}
+              disabled={deploying || !!contractAddress}
+              className="flex-1"
+            >
+              V1 (Original)
+            </Button>
+            <Button
+              type="button"
+              variant={contractVersion === "v2" ? "default" : "outline"}
+              onClick={() => setContractVersion("v2")}
+              disabled={deploying || !!contractAddress}
+              className="flex-1"
+            >
+              V2 (Enhanced)
+            </Button>
+          </div>
+          {contractVersion === "v2" && (
+            <div className="rounded-md bg-blue-500/10 p-3 space-y-1">
+              <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                V2 Enhanced Features:
+              </p>
+              <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5 ml-1">
+                <li>Triangle arbitrage (3-leg routes)</li>
+                <li>More tokens: LINK, UNI, AAVE</li>
+                <li>Gas optimization (~10% better)</li>
+                <li>Higher limits (500 ETH max, 150 daily flash loans)</li>
+                <li>Lower profit threshold (0.0005 ETH)</li>
+              </ul>
+            </div>
+          )}
+        </div>
+
         {/* Node Status */}
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div className="flex items-center gap-2">

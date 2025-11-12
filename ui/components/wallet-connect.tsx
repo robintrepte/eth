@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
 export function WalletConnect() {
-  const { address, isConnected, connect, disconnect, provider } = useWallet();
+  const { address, isConnected, connect, disconnect, provider, isOperator } = useWallet();
   const [balance, setBalance] = useState<string>("0");
 
   useEffect(() => {
@@ -35,6 +35,11 @@ export function WalletConnect() {
             <Badge variant="outline" className="font-mono text-xs">
               {address?.slice(0, 6)}...{address?.slice(-4)}
             </Badge>
+            {isOperator && (
+              <Badge variant="default" className="text-xs">
+                Operator
+              </Badge>
+            )}
             <CopyButton text={address || ""} size="icon" variant="ghost" />
           </div>
           <span className="text-xs text-muted-foreground">
@@ -45,6 +50,11 @@ export function WalletConnect() {
           <Badge variant="outline" className="font-mono text-xs">
             {address?.slice(0, 4)}...{address?.slice(-3)}
           </Badge>
+          {isOperator && (
+            <Badge variant="default" className="text-xs">
+              OP
+            </Badge>
+          )}
         </div>
         <Button variant="outline" size="sm" onClick={disconnect} className="text-xs sm:text-sm">
           <span className="hidden sm:inline">Disconnect</span>

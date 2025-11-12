@@ -12,6 +12,7 @@ import { GasEstimate } from "@/components/gas-estimate";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function DepositWithdraw() {
-  const { contract, isConnected } = useWallet();
+  const { contract, isConnected, isOperator } = useWallet();
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [depositing, setDepositing] = useState(false);
@@ -147,12 +148,34 @@ export function DepositWithdraw() {
     );
   }
 
+  if (!isOperator) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Deposit & Withdraw</CardTitle>
+          <CardDescription>Operator access required</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertDescription>
+              Only the contract operator (deployer) can deposit or withdraw funds.
+              Please connect with the account that deployed the contract.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
       <Card className="transition-all hover:shadow-md">
         <CardHeader>
           <CardTitle>Deposit ETH</CardTitle>
-          <CardDescription>Deposit ETH to the contract (converts to WETH)</CardDescription>
+          <CardDescription>
+            Deposit ETH to the contract (converts to WETH). Operator only.
+            Funds are used for arbitrage trading or can be withdrawn later.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -205,7 +228,10 @@ export function DepositWithdraw() {
       <Card className="transition-all hover:shadow-md">
         <CardHeader>
           <CardTitle>Withdraw ETH</CardTitle>
-          <CardDescription>Withdraw WETH from the contract (converts to ETH)</CardDescription>
+          <CardDescription>
+            Withdraw WETH from the contract (converts to ETH). Operator only.
+            You can withdraw any available balance, including profits from trades.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

@@ -9,6 +9,7 @@ interface WalletContextType {
   provider: ethers.BrowserProvider | null;
   signer: ethers.Signer | null;
   isConnected: boolean;
+  isOperator: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
   contract: ethers.Contract | null;
@@ -21,6 +22,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
   const [signer, setSigner] = useState<ethers.Signer | null>(null);
   const [contract, setContract] = useState<ethers.Contract | null>(null);
+  const [isOperator, setIsOperator] = useState(false);
 
   const connect = async () => {
     try {
@@ -41,6 +43,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (contractAddress) {
         const contractInstance = getContract(newSigner, contractAddress);
         setContract(contractInstance);
+        
+        // Check if user is operator
+        try {
+          const operator = await contractInstance.operator();
+          setIsOperator(operator.toLowerCase() === newAddress.toLowerCase());
+        } catch {
+          setIsOperator(false);
+        }
+      } else {
+        setIsOperator(false);
       }
     } catch (error) {
       console.error("Failed to connect wallet:", error);
@@ -53,6 +65,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setProvider(null);
     setSigner(null);
     setContract(null);
+    setIsOperator(false);
   };
 
   useEffect(() => {
@@ -78,7 +91,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 "";
               
               if (contractAddress) {
-                setContract(getContract(signer, contractAddress));
+                const contractInstance = getContract(signer, contractAddress);
+                setContract(contractInstance);
+                
+                // Check if user is operator
+                try {
+                  const operator = await contractInstance.operator();
+                  const userAddress = await signer.getAddress();
+                  setIsOperator(operator.toLowerCase() === userAddress.toLowerCase());
+                } catch {
+                  setIsOperator(false);
+                }
+              } else {
+                setIsOperator(false);
               }
             }
           } catch (error) {
@@ -101,6 +126,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Update operator status when contract or address changes
+  useEffect(() => {
+    const checkOperator = async () => {
+      if (contract && address) {
+        try {
+          const operator = await contract.operator();
+          setIsOperator(operator.toLowerCase() === address.toLowerCase());
+        } catch {
+          setIsOperator(false);
+        }
+      } else {
+        setIsOperator(false);
+      }
+    };
+    
+    checkOperator();
+  }, [contract, address]);
+
   return (
     <WalletContext.Provider
       value={{
@@ -108,6 +151,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         provider,
         signer,
         isConnected: !!address,
+        isOperator,
         connect,
         disconnect,
         contract,

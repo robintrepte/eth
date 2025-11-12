@@ -1,4 +1,4 @@
-const { spawn } = require("child_process");
+const { spawn, exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
@@ -97,6 +97,7 @@ function startHardhatNode() {
     });
 
     let output = "";
+    let errorOutput = "";
     hardhatProcess.stdout.on("data", (data) => {
       const text = data.toString();
       output += text;
@@ -110,7 +111,26 @@ function startHardhatNode() {
     });
 
     hardhatProcess.stderr.on("data", (data) => {
+      const text = data.toString();
+      errorOutput += text;
       process.stderr.write(data);
+      
+      // Check for port already in use error
+      if (text.includes("EADDRINUSE") || text.includes("address already in use")) {
+        log("\n❌ Port 8545 is already in use", "red");
+        log("   Trying to free the port...", "yellow");
+        
+        // Try to kill processes on port 8545
+        exec(`lsof -ti:${HARDHAT_PORT} | xargs kill -9 2>/dev/null`, (error) => {
+          if (error) {
+            log(`   Could not automatically free port ${HARDHAT_PORT}`, "yellow");
+            log(`   Please manually stop the process using: lsof -ti:${HARDHAT_PORT} | xargs kill -9`, "yellow");
+          } else {
+            log(`   Port ${HARDHAT_PORT} freed. Please try running 'npm start' again.`, "green");
+          }
+          reject(new Error(`Port ${HARDHAT_PORT} is already in use`));
+        });
+      }
     });
 
     hardhatProcess.on("error", (error) => {
@@ -188,6 +208,17 @@ function startUI() {
   return new Promise((resolve) => {
     log("\n🌐 Starting Next.js UI...", "cyan");
     log(`   UI will be available at http://localhost:${UI_PORT}`, "blue");
+
+    // Clean up Next.js lock file if it exists
+    const lockFile = path.join(__dirname, "../ui/.next/dev/lock");
+    if (fs.existsSync(lockFile)) {
+      try {
+        fs.unlinkSync(lockFile);
+        log("   Cleaned up stale lock file", "yellow");
+      } catch (error) {
+        log(`   Warning: Could not remove lock file: ${error.message}`, "yellow");
+      }
+    }
 
     uiProcess = spawn("npm", ["run", "dev"], {
       cwd: path.join(__dirname, "../ui"),
