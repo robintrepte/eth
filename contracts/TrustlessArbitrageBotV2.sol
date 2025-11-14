@@ -212,10 +212,21 @@ contract TrustlessArbitrageBotV2 is ReentrancyGuard, Pausable {
     uint256 public totalVolume;
     uint256 public totalProfit;
     uint256 public totalTriangleArbs; // Track triangle arbitrage trades
+    uint256 public totalLosses; // Track total losses (safety feature)
     
     uint256 public gasPriceHintWei;
     uint256 public flashPremiumBps = 5;
     bool public enableTriangleArb = true; // Toggle for triangle arbitrage
+    
+    // Safety features
+    uint256 public maxLossPerTrade = 1 ether; // Maximum loss allowed per trade (default: 1 ETH)
+    uint256 public dailyLossLimit = 5 ether; // Maximum daily loss limit (default: 5 ETH)
+    uint256 public maxGasPriceGwei = 200; // Maximum gas price in Gwei (default: 200 Gwei = 200e9 wei)
+    uint256 public minTimeBetweenTrades = 10; // Minimum seconds between trades (default: 10s)
+    
+    mapping(address => uint256) public dailyLosses; // Track daily losses per user
+    mapping(address => uint256) public lastTradeTime; // Track last trade time per user
+    mapping(address => uint256) public lastDailyLossReset; // Track daily loss reset time
 
     event ArbitrageExecuted(
         address indexed user,
@@ -256,6 +267,8 @@ contract TrustlessArbitrageBotV2 is ReentrancyGuard, Pausable {
     event GasPriceHintUpdated(uint256 newHintWei);
     event FlashPremiumBpsUpdated(uint256 newBps);
     event TriangleArbToggled(bool enabled);
+    event SafetyLimitUpdated(string limitType, uint256 newValue);
+    event TradeLossDetected(address indexed user, uint256 lossAmount, uint256 dailyLossTotal);
 
     constructor() {
         operator = msg.sender;
@@ -481,6 +494,89 @@ contract TrustlessArbitrageBotV2 is ReentrancyGuard, Pausable {
         _executeArbWithOptionalFlash(params);
     }
 
+    /**
+     * @notice Execute arbitrage with pre-calculated parameters (production-ready)
+     * @dev This function accepts opportunity data from off-chain StartNative calls
+     * @dev Bots should: 1) Call StartNative off-chain (free), 2) Call this with results
+     * @param params Pre-calculated arbitrage parameters from StartNative
+     * @param expectedProfit Expected profit from the opportunity (for validation)
+     */
+    function ExecuteArbitrage(
+        ArbitrageParams memory params,
+        uint256 expectedProfit
+    ) 
+        external 
+        onlyOperator
+        nonReentrant 
+        whenNotPaused 
+    {
+        // Validate parameters
+        require(params.tokenIn != address(0) && params.tokenOut != address(0), "Invalid tokens");
+        require(params.tokenIn == WETH, "Only WETH-in routes supported");
+        require(params.amountIn > 0 && params.amountIn <= MAX_TRADE_AMOUNT, "Invalid amount");
+        require(params.minOutLeg1 > 0 && params.minOutLeg2 > 0, "Invalid slippage protection");
+        require(params.dexIn < 4 && params.dexOut < 4, "Invalid DEX");
+        require(params.deadline > block.timestamp, "Deadline passed");
+        require(params.recipient != address(0), "Invalid recipient");
+        require(expectedProfit >= MIN_PROFIT_THRESHOLD, "Profit too low");
+        
+        // For triangle arbitrage, validate intermediate token and leg
+        if (params.isTriangleArb) {
+            require(params.tokenIntermediate != address(0), "Invalid intermediate token");
+            require(params.minOutLeg3 > 0, "Invalid triangle slippage");
+            require(params.dexIntermediate < 4, "Invalid intermediate DEX");
+        }
+        
+        // Validate gas estimate is reasonable
+        require(params.gasLimitEstimate > 0 && params.gasLimitEstimate < 2000000, "Invalid gas limit");
+        
+        // Calculate final gas limit (use provided estimate or calculate)
+        uint256 gasPrice = params.gasPriceWei > 0 ? params.gasPriceWei : tx.gasprice;
+        uint256 finalGasLimit = params.gasLimitEstimate;
+        
+        // ========== SAFETY CHECKS ==========
+        
+        // 1. Gas price limit check (convert wei to Gwei)
+        uint256 maxGasPriceWei = maxGasPriceGwei * 1e9;
+        require(gasPrice <= maxGasPriceWei, "Gas price too high");
+        
+        // 2. Minimum time between trades (cooldown)
+        require(
+            block.timestamp >= lastTradeTime[msg.sender] + minTimeBetweenTrades,
+            "Trade cooldown active"
+        );
+        
+        // 3. Reset daily losses if new day
+        if (block.timestamp > lastDailyLossReset[msg.sender] + 1 days) {
+            dailyLosses[msg.sender] = 0;
+            lastDailyLossReset[msg.sender] = block.timestamp;
+        }
+        
+        // 4. Check daily loss limit
+        require(dailyLosses[msg.sender] < dailyLossLimit, "Daily loss limit exceeded");
+        
+        // 5. Check maximum loss per trade
+        uint256 estimatedGasCost = gasPrice * finalGasLimit;
+        uint256 maxPotentialLoss = estimatedGasCost + params.amountIn; // Worst case: lose all + gas
+        require(maxPotentialLoss <= maxLossPerTrade, "Trade exceeds max loss per trade");
+        
+        // ========== END SAFETY CHECKS ==========
+        
+        // Update params with current gas price if not provided
+        params.gasPriceWei = gasPrice;
+        params.gasLimitEstimate = finalGasLimit;
+        
+        // Check if we should use own liquidity
+        bool hasOwnLiquidity = IERC20(params.tokenIn).balanceOf(address(this)) >= params.amountIn;
+        params.useOwnLiquidity = hasOwnLiquidity && params.useOwnLiquidity;
+        
+        // Update last trade time
+        lastTradeTime[msg.sender] = block.timestamp;
+        
+        // Execute the arbitrage
+        _executeArbWithOptionalFlash(params);
+    }
+
     function depositETH() external payable onlyOperator {
         require(msg.value > 0, "No ETH sent");
         weth.deposit{value: msg.value}();
@@ -530,6 +626,71 @@ contract TrustlessArbitrageBotV2 is ReentrancyGuard, Pausable {
     function setTriangleArbEnabled(bool _enabled) external onlyOperator {
         enableTriangleArb = _enabled;
         emit TriangleArbToggled(_enabled);
+    }
+
+    /**
+     * @notice Safety: Set maximum loss allowed per trade
+     */
+    function setMaxLossPerTrade(uint256 _maxLoss) external onlyOperator {
+        require(_maxLoss > 0 && _maxLoss <= 10 ether, "Invalid max loss");
+        maxLossPerTrade = _maxLoss;
+        emit SafetyLimitUpdated("maxLossPerTrade", _maxLoss);
+    }
+
+    /**
+     * @notice Safety: Set daily loss limit
+     */
+    function setDailyLossLimit(uint256 _limit) external onlyOperator {
+        require(_limit > 0 && _limit <= 50 ether, "Invalid daily loss limit");
+        dailyLossLimit = _limit;
+        emit SafetyLimitUpdated("dailyLossLimit", _limit);
+    }
+
+    /**
+     * @notice Safety: Set maximum gas price (in Gwei)
+     */
+    function setMaxGasPriceGwei(uint256 _maxGwei) external onlyOperator {
+        require(_maxGwei > 0 && _maxGwei <= 1000, "Invalid max gas price");
+        maxGasPriceGwei = _maxGwei;
+        emit SafetyLimitUpdated("maxGasPriceGwei", _maxGwei);
+    }
+
+    /**
+     * @notice Safety: Set minimum time between trades (in seconds)
+     */
+    function setMinTimeBetweenTrades(uint256 _seconds) external onlyOperator {
+        require(_seconds >= 0 && _seconds <= 3600, "Invalid cooldown");
+        minTimeBetweenTrades = _seconds;
+        emit SafetyLimitUpdated("minTimeBetweenTrades", _seconds);
+    }
+
+    /**
+     * @notice Safety: Get current safety status
+     */
+    function getSafetyStatus(address user) external view returns (
+        uint256 userDailyLoss,
+        uint256 userLastTradeTime,
+        uint256 timeUntilNextTrade,
+        bool canTrade
+    ) {
+        userDailyLoss = dailyLosses[user];
+        userLastTradeTime = lastTradeTime[user];
+        
+        if (block.timestamp >= userLastTradeTime + minTimeBetweenTrades) {
+            timeUntilNextTrade = 0;
+        } else {
+            timeUntilNextTrade = (userLastTradeTime + minTimeBetweenTrades) - block.timestamp;
+        }
+        
+        // Reset daily loss if new day
+        uint256 effectiveDailyLoss = userDailyLoss;
+        if (block.timestamp > lastDailyLossReset[user] + 1 days) {
+            effectiveDailyLoss = 0;
+        }
+        
+        canTrade = (effectiveDailyLoss < dailyLossLimit) && 
+                   (timeUntilNextTrade == 0) &&
+                   !paused();
     }
 
     /**
@@ -874,6 +1035,19 @@ contract TrustlessArbitrageBotV2 is ReentrancyGuard, Pausable {
             uint256 profit = balanceAfter - balanceBefore;
             uint256 gasCost = params.gasPriceWei * params.gasLimitEstimate;
             
+            // Safety: Track losses
+            if (profit < gasCost) {
+                uint256 loss = gasCost - profit;
+                totalLosses += loss;
+                dailyLosses[params.recipient] += loss;
+                
+                emit TradeLossDetected(params.recipient, loss, dailyLosses[params.recipient]);
+                
+                // Revert if loss exceeds safety limits
+                require(loss <= maxLossPerTrade, "Loss exceeds max loss per trade");
+                require(dailyLosses[params.recipient] <= dailyLossLimit, "Daily loss limit exceeded");
+            }
+            
             require(profit > gasCost + params.minNetProfitWei, "Net profit too low");
             
             if (profit > 0) {
@@ -959,6 +1133,19 @@ contract TrustlessArbitrageBotV2 is ReentrancyGuard, Pausable {
         
         uint256 profit = balanceAfter - totalDebt;
         uint256 gasCost = arbParams.gasPriceWei * arbParams.gasLimitEstimate;
+        
+        // Safety: Track losses (for flash loans, loss = gas + premium if profit < gas)
+        if (profit < gasCost) {
+            uint256 loss = gasCost - profit;
+            totalLosses += loss;
+            dailyLosses[originalUser] += loss;
+            
+            emit TradeLossDetected(originalUser, loss, dailyLosses[originalUser]);
+            
+            // Revert if loss exceeds safety limits
+            require(loss <= maxLossPerTrade, "Loss exceeds max loss per trade");
+            require(dailyLosses[originalUser] <= dailyLossLimit, "Daily loss limit exceeded");
+        }
         
         require(profit >= gasCost + arbParams.minNetProfitWei, "Net profit too low after gas");
         
@@ -1195,7 +1382,8 @@ contract TrustlessArbitrageBotV2 is ReentrancyGuard, Pausable {
         uint256 userRemainingCooldown,
         uint256 userDailyLimit,
         bool canTrade,
-        uint256 contractWETHBalance
+        uint256 contractWETHBalance,
+        uint256 contractTotalLosses
     ) {
         contractTotalTrades = totalTrades;
         contractTotalVolume = totalVolume;
@@ -1211,6 +1399,7 @@ contract TrustlessArbitrageBotV2 is ReentrancyGuard, Pausable {
         userDailyLimit = DAILY_FLASH_LOAN_LIMIT;
         canTrade = userRemainingCooldown == 0 && userFlashLoansToday < DAILY_FLASH_LOAN_LIMIT && !paused();
         contractWETHBalance = IERC20(WETH).balanceOf(address(this));
+        contractTotalLosses = totalLosses;
     }
 
     function isTokenSupported(address token) external view returns (bool) {

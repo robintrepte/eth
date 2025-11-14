@@ -90,8 +90,6 @@ export function ArbitrageExecute() {
     }
   };
 
-  const { isOperator } = useWallet();
-
   if (!isConnected) {
     return (
       <Card>

@@ -3,15 +3,23 @@
  */
 
 export function parseError(error: unknown): { message: string; suggestion?: string } {
-  const err = error as { message?: string; reason?: string } | null | undefined;
+  const err = error as { message?: string; reason?: string; code?: string } | null | undefined;
   const errorMessage = err?.message || err?.reason || String(error) || "Unknown error";
   const errorStr = errorMessage.toLowerCase();
 
-  // Common error patterns
-  if (errorStr.includes("user rejected") || errorStr.includes("user denied")) {
+  // MetaMask not installed
+  if (err?.code === "METAMASK_NOT_INSTALLED" || errorStr.includes("metamask not installed") || errorStr.includes("metamask not available")) {
     return {
-      message: "Transaction was cancelled",
-      suggestion: "Please approve the transaction in your wallet to continue",
+      message: "MetaMask not installed",
+      suggestion: "Please install the MetaMask browser extension to connect your wallet. Visit https://metamask.io to download it.",
+    };
+  }
+
+  // User rejected connection
+  if (err?.code === "USER_REJECTED" || err?.code === "USER_REJECTED_NETWORK" || errorStr.includes("user rejected") || errorStr.includes("user denied")) {
+    return {
+      message: "Connection was cancelled",
+      suggestion: "Please approve the connection request in MetaMask to continue",
     };
   }
 

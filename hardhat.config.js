@@ -26,17 +26,18 @@ module.exports = {
       },
       chainId: 31337,
       // Gas settings for better testing
-      gas: 12000000,
-      blockGasLimit: 12000000,
+      // Increased for complex view functions like StartNative
+      gas: 50000000, // 50M gas (similar to mainnet nodes)
+      blockGasLimit: 50000000,
       // Allow unlimited contract size for complex contracts
       allowUnlimitedContractSize: true,
     },
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
-      // Gas settings
-      gas: 12000000,
-      blockGasLimit: 12000000,
+      // Gas settings - increased for complex view functions
+      gas: 50000000, // 50M gas (similar to mainnet nodes)
+      blockGasLimit: 50000000,
     },
   },
   paths: {

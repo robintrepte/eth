@@ -75,6 +75,9 @@ export function DepositWithdraw() {
       toast.success(`Successfully deposited ${depositAmount} ETH`);
       setDepositAmount("");
       setShowDepositConfirm(false);
+      
+      // Trigger immediate refresh of status dashboard
+      window.dispatchEvent(new Event("deposit-complete"));
     } catch (error) {
       console.error("Deposit error:", error);
       const parsed = parseError(error);
@@ -126,6 +129,9 @@ export function DepositWithdraw() {
       toast.success(`Successfully withdrew ${withdrawAmount} ETH`);
       setWithdrawAmount("");
       setShowWithdrawConfirm(false);
+      
+      // Trigger immediate refresh of status dashboard
+      window.dispatchEvent(new Event("withdraw-complete"));
     } catch (error) {
       console.error("Withdraw error:", error);
       const parsed = parseError(error);

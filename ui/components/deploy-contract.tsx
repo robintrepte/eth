@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/copy-button";
 import { addTransaction } from "@/components/transaction-history";
+import { ethers } from "ethers";
+import contractABIV2 from "@/lib/contract-abi-v2.json";
 
 export function DeployContract() {
   const { } = useWallet();
@@ -37,10 +39,49 @@ export function DeployContract() {
       const response = await fetch("/api/contract-address");
       const data = await response.json();
       if (data.configured && data.contractAddress) {
-        setContractAddress(data.contractAddress);
-        // Set in window for immediate use
-        if (typeof window !== "undefined") {
-          (window as unknown as Record<string, unknown>).__CONTRACT_ADDRESS__ = data.contractAddress;
+        // Verify the contract actually exists on-chain
+        try {
+          const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+          const code = await provider.getCode(data.contractAddress);
+          // Only set as deployed if contract has code on-chain
+          if (code && code !== "0x") {
+            setContractAddress(data.contractAddress);
+            // Set in window for immediate use
+            if (typeof window !== "undefined") {
+              (window as unknown as Record<string, unknown>).__CONTRACT_ADDRESS__ = data.contractAddress;
+            }
+            
+            // Use version from API if available, otherwise detect it
+            let detectedVersion = data.contractVersion;
+            if (!detectedVersion) {
+              // Detect contract version by trying V2-specific function
+              try {
+                const v2Interface = new ethers.Interface(contractABIV2);
+                const detectData = v2Interface.encodeFunctionData("isTriangleArbEnabled", []);
+                try {
+                  const result = await provider.call({ to: data.contractAddress, data: detectData });
+                  if (result && result !== "0x") {
+                    detectedVersion = "v2";
+                  } else {
+                    detectedVersion = "v1";
+                  }
+                } catch {
+                  // Function doesn't exist, it's V1
+                  detectedVersion = "v1";
+                }
+              } catch {
+                // Detection failed, default to v1
+                detectedVersion = "v1";
+              }
+            }
+            
+            // Set version in window
+            if (typeof window !== "undefined" && detectedVersion) {
+              (window as unknown as Record<string, unknown>).__CONTRACT_VERSION__ = detectedVersion;
+            }
+          }
+        } catch {
+          // Contract doesn't exist on-chain, ignore saved address
         }
       }
     } catch {

@@ -46,19 +46,43 @@ export function HelpDialog() {
               </ol>
 
               <h3 className="font-semibold text-base mt-4">Setting Up MetaMask</h3>
-              <ol className="list-decimal list-inside space-y-2 ml-2">
-                <li>Open MetaMask and click the network dropdown</li>
-                <li>Select &quot;Add Network&quot; or &quot;Add a network manually&quot;</li>
-                <li>Enter these details:
-                  <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                    <li>Network Name: <code className="bg-muted px-1 rounded">Hardhat Local</code></li>
-                    <li>RPC URL: <code className="bg-muted px-1 rounded">http://127.0.0.1:8545</code></li>
-                    <li>Chain ID: <code className="bg-muted px-1 rounded">31337</code></li>
-                    <li>Currency Symbol: <code className="bg-muted px-1 rounded">ETH</code></li>
-                  </ul>
-                </li>
-                <li>Import a test account from Hardhat (private keys shown when node starts)</li>
-              </ol>
+              
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-semibold text-sm mt-2">Step 1: Import Hardhat Test Account</h4>
+                  <ol className="list-decimal list-inside space-y-1 ml-2 text-sm">
+                    <li>Open MetaMask extension (unlock it with your password)</li>
+                    <li>Click the <strong>account circle/icon</strong> at the top right (next to the network name)</li>
+                    <li>Click <strong>&quot;Import Account&quot;</strong> at the bottom of the menu</li>
+                    <li>Paste your Hardhat private key (starts with <code className="bg-muted px-1 rounded">0x</code>)</li>
+                    <li>Click <strong>&quot;Import&quot;</strong></li>
+                    <li>The account should now appear in your account list</li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground mt-2 ml-2">
+                    💡 <strong>Tip:</strong> Use Account #0 from Hardhat if you want to be the operator (contract deployer)
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-sm mt-2">Step 2: Add Hardhat Local Network</h4>
+                  <p className="text-sm text-muted-foreground ml-2 mb-2">
+                    The UI will automatically add this network when you connect, OR you can add it manually:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2 text-sm">
+                    <li>Click the network dropdown (top center, shows &quot;Ethereum Mainnet&quot; or similar)</li>
+                    <li>Click <strong>&quot;Add Network&quot;</strong> or <strong>&quot;Add a network manually&quot;</strong></li>
+                    <li>Enter these details:
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                        <li>Network Name: <code className="bg-muted px-1 rounded">Hardhat Local</code></li>
+                        <li>RPC URL: <code className="bg-muted px-1 rounded">http://127.0.0.1:8545</code></li>
+                        <li>Chain ID: <code className="bg-muted px-1 rounded">31337</code></li>
+                        <li>Currency Symbol: <code className="bg-muted px-1 rounded">ETH</code></li>
+                      </ul>
+                    </li>
+                    <li>Click <strong>&quot;Save&quot;</strong></li>
+                  </ol>
+                </div>
+              </div>
             </div>
           </TabsContent>
 

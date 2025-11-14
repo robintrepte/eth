@@ -2,28 +2,53 @@
 
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
-import { formatEther } from "@/lib/ethers-utils";
+import { formatEther, getLocalhostProvider } from "@/lib/ethers-utils";
 import { CopyButton } from "@/components/copy-button";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { parseError } from "@/lib/error-handler";
 
 export function WalletConnect() {
   const { address, isConnected, connect, disconnect, provider, isOperator } = useWallet();
   const [balance, setBalance] = useState<string>("0");
 
   useEffect(() => {
-    if (isConnected && provider) {
+    if (isConnected && provider && address) {
       const updateBalance = async () => {
         try {
-          const bal = await provider.getBalance(address!);
-          setBalance(formatEther(bal));
+          // Check which network we're on
+          const network = await provider.getNetwork();
+          console.log("Current network:", network.chainId.toString());
+          
+          const bal = await provider.getBalance(address);
+          const balanceStr = formatEther(bal);
+          setBalance(balanceStr);
+          
+          // Log for debugging
+          if (parseFloat(balanceStr) === 0) {
+            console.warn("Balance is 0. Make sure you're on Hardhat Local network (Chain ID: 31337)");
+            console.log("Current Chain ID:", network.chainId.toString());
+            console.log("Expected Chain ID: 31337");
+          }
         } catch (error) {
           console.error("Error fetching balance:", error);
+          // Try to get balance from localhost directly as fallback
+          try {
+            const localProvider = getLocalhostProvider();
+            const bal = await localProvider.getBalance(address);
+            setBalance(formatEther(bal));
+            console.log("Fetched balance from localhost directly:", formatEther(bal));
+          } catch (fallbackError) {
+            console.error("Fallback balance fetch also failed:", fallbackError);
+          }
         }
       };
       updateBalance();
       const interval = setInterval(updateBalance, 5000);
       return () => clearInterval(interval);
+    } else {
+      setBalance("0");
     }
   }, [isConnected, provider, address]);
 
@@ -64,8 +89,21 @@ export function WalletConnect() {
     );
   }
 
+  const handleConnect = async () => {
+    try {
+      await connect();
+    } catch (error) {
+      console.error("Connect error:", error);
+      const parsed = parseError(error);
+      toast.error(parsed.message, {
+        description: parsed.suggestion,
+        duration: 5000,
+      });
+    }
+  };
+
   return (
-    <Button onClick={connect} size="sm" className="text-xs sm:text-sm">
+    <Button onClick={handleConnect} size="sm" className="text-xs sm:text-sm">
       <span className="hidden sm:inline">Connect Wallet</span>
       <span className="sm:hidden">Connect</span>
     </Button>

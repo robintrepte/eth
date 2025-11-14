@@ -15,8 +15,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, TrendingUp, Wallet, Zap, Rocket, History } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 
-export default function Home() {
+function TabContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<string>("deploy");
+
+  // Get initial tab from URL or default to "deploy"
+  useEffect(() => {
+    const tabFromUrl = searchParams.get("tab");
+    if (tabFromUrl && ["deploy", "manage", "search", "execute", "history"].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <TransactionStatusUpdater />
@@ -51,18 +73,13 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Deployment Section */}
-        <div className="mb-8">
-          <DeployContract />
-        </div>
-
         {/* Status Dashboard */}
         <div className="mb-8">
           <StatusDashboard />
         </div>
 
         {/* Main Actions */}
-        <Tabs defaultValue="manage" className="space-y-4 sm:space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 sm:space-y-6">
           <TabsList className="grid h-auto w-full grid-cols-5 gap-1 p-1 sm:gap-2">
             <TabsTrigger 
               value="deploy" 
@@ -178,5 +195,17 @@ export default function Home() {
         </Card>
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <TabContent />
+    </Suspense>
   );
 }

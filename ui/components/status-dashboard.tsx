@@ -35,21 +35,62 @@ export function StatusDashboard() {
     try {
       setLoading(true);
       setError(null);
+      
+      // Check if contract has code (is deployed)
+      const code = await contract.runner?.provider?.getCode(contract.target);
+      if (!code || code === "0x") {
+        setError("Contract not deployed. Please deploy the contract first in the Deploy tab.");
+        setLoading(false);
+        return;
+      }
+      
       const result = await contract.GetStatus();
+      
+      // With correct ABI, we can access by name directly
+      // V2 returns 9 values, V1 returns 8 values
+      const contractTotalTrades = result.contractTotalTrades || BigInt(0);
+      const contractTotalVolume = result.contractTotalVolume || BigInt(0);
+      const contractTotalProfit = result.contractTotalProfit || BigInt(0);
+      const contractTriangleArbs = result.contractTriangleArbs !== undefined ? result.contractTriangleArbs : undefined; // V2 only, may be undefined
+      const userFlashLoansToday = result.userFlashLoansToday || BigInt(0);
+      const userRemainingCooldown = result.userRemainingCooldown || BigInt(0);
+      const userDailyLimit = result.userDailyLimit || BigInt(0);
+      const canTrade = result.canTrade !== undefined ? result.canTrade : false;
+      const contractWETHBalance = result.contractWETHBalance || BigInt(0);
+      
+      console.log("GetStatus parsed:", {
+        contractTotalTrades: contractTotalTrades.toString(),
+        contractTotalVolume: contractTotalVolume.toString(),
+        contractTotalProfit: contractTotalProfit.toString(),
+        contractTriangleArbs: contractTriangleArbs !== undefined ? contractTriangleArbs.toString() : "N/A (V1)",
+        userFlashLoansToday: userFlashLoansToday.toString(),
+        userRemainingCooldown: userRemainingCooldown.toString(),
+        userDailyLimit: userDailyLimit.toString(),
+        canTrade,
+        contractWETHBalance: contractWETHBalance.toString(),
+        contractWETHBalanceFormatted: formatEther(contractWETHBalance),
+      });
+      
       setStatus({
-        contractTotalTrades: result.contractTotalTrades,
-        contractTotalVolume: result.contractTotalVolume,
-        contractTotalProfit: result.contractTotalProfit,
-        contractTriangleArbs: result.contractTriangleArbs, // V2 only, may be undefined
-        userFlashLoansToday: result.userFlashLoansToday,
-        userRemainingCooldown: result.userRemainingCooldown,
-        userDailyLimit: result.userDailyLimit,
-        canTrade: result.canTrade,
-        contractWETHBalance: result.contractWETHBalance,
+        contractTotalTrades,
+        contractTotalVolume,
+        contractTotalProfit,
+        contractTriangleArbs: contractTriangleArbs !== undefined && contractTriangleArbs > BigInt(0) ? contractTriangleArbs : undefined, // Only set if > 0 (V2)
+        userFlashLoansToday,
+        userRemainingCooldown,
+        userDailyLimit,
+        canTrade,
+        contractWETHBalance,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch status";
-      setError(message);
+      const error = err as { code?: string; message?: string; data?: string };
+      // Check if it's a "no code" error
+      if (error.code === "BAD_DATA" || error.data === "0x" || error.message?.includes("0x")) {
+        setError("Contract not deployed. Please deploy the contract first in the Deploy tab.");
+      } else {
+        const message = err instanceof Error ? err.message : "Failed to fetch status";
+        setError(message);
+      }
       console.error("Error fetching status:", err);
     } finally {
       setLoading(false);
@@ -87,9 +128,19 @@ export function StatusDashboard() {
     
     window.addEventListener("settings-changed", handleSettingsChange);
     
+    // Also listen for deposit/withdraw events to refresh immediately
+    const handleDepositWithdraw = () => {
+      // Refresh immediately
+      fetchStatus();
+    };
+    window.addEventListener("deposit-complete", handleDepositWithdraw);
+    window.addEventListener("withdraw-complete", handleDepositWithdraw);
+    
     return () => {
       clearInterval(interval);
       window.removeEventListener("settings-changed", handleSettingsChange);
+      window.removeEventListener("deposit-complete", handleDepositWithdraw);
+      window.removeEventListener("withdraw-complete", handleDepositWithdraw);
     };
   }, [contract, isConnected, fetchStatus]);
 
@@ -218,7 +269,7 @@ export function StatusDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold tracking-tight">
-              {status.contractTriangleArbs.toString()}
+              {status.contractTriangleArbs?.toString() || "0"}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">3-leg arbitrage trades</p>
           </CardContent>

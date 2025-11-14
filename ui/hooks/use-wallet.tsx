@@ -41,7 +41,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         "";
       
       if (contractAddress) {
-        const contractInstance = getContract(newSigner, contractAddress);
+        // getContract now auto-detects version, but we can set it from env if available
+        const windowVersion = typeof window !== "undefined"
+          ? (window as { __CONTRACT_VERSION__?: string }).__CONTRACT_VERSION__
+          : undefined;
+        const envVersion = process.env.NEXT_PUBLIC_CONTRACT_VERSION;
+        if (windowVersion || envVersion) {
+          if (typeof window !== "undefined") {
+            (window as { __CONTRACT_VERSION__?: string }).__CONTRACT_VERSION__ = windowVersion || envVersion || "v1";
+          }
+        }
+        
+        const contractInstance = await getContract(newSigner, contractAddress);
         setContract(contractInstance);
         
         // Check if user is operator
@@ -56,6 +67,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to connect wallet:", error);
+      // Re-throw with better error message for UI
+      const err = error as { message?: string; code?: string; suggestion?: string };
+      if (err.code === "METAMASK_NOT_INSTALLED") {
+        throw new Error(
+          "MetaMask is not installed. Please install the MetaMask browser extension to connect your wallet.\n\n" +
+          "Visit https://metamask.io to download it."
+        );
+      }
+      if (err.code === "USER_REJECTED" || err.code === "USER_REJECTED_NETWORK") {
+        throw new Error(err.message || "Connection was rejected. Please try again and approve the request.");
+      }
       throw error;
     }
   };
@@ -91,7 +113,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 "";
               
               if (contractAddress) {
-                const contractInstance = getContract(signer, contractAddress);
+                // Set version from env if available (getContract will auto-detect if not)
+                const windowVersion = (window as { __CONTRACT_VERSION__?: string }).__CONTRACT_VERSION__;
+                const envVersion = process.env.NEXT_PUBLIC_CONTRACT_VERSION;
+                if (windowVersion || envVersion) {
+                  (window as { __CONTRACT_VERSION__?: string }).__CONTRACT_VERSION__ = windowVersion || envVersion || "v1";
+                }
+                
+                const contractInstance = await getContract(signer, contractAddress);
                 setContract(contractInstance);
                 
                 // Check if user is operator

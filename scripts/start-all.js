@@ -238,14 +238,37 @@ function cleanup() {
   log("\n\n🛑 Shutting down...", "yellow");
   
   if (hardhatProcess) {
-    hardhatProcess.kill();
-    log("✓ Hardhat node stopped", "green");
+    try {
+      hardhatProcess.kill("SIGTERM");
+      log("✓ Hardhat node stopped", "green");
+    } catch (error) {
+      // Process might already be dead, try force kill
+      try {
+        hardhatProcess.kill("SIGKILL");
+      } catch {
+        // Ignore
+      }
+    }
   }
   
   if (uiProcess) {
-    uiProcess.kill();
-    log("✓ UI stopped", "green");
+    try {
+      uiProcess.kill("SIGTERM");
+      log("✓ UI stopped", "green");
+    } catch (error) {
+      // Process might already be dead, try force kill
+      try {
+        uiProcess.kill("SIGKILL");
+      } catch {
+        // Ignore
+      }
+    }
   }
+  
+  // Note: .env.local keeps the contract address, but the UI now checks if contract exists on-chain
+  // So when you restart, if the Hardhat node was restarted, you'll need to deploy again
+  log("\n💡 When you restart, the UI will check if the contract exists on-chain", "cyan");
+  log("   If the Hardhat node was restarted, you'll need to deploy again\n", "cyan");
   
   process.exit(0);
 }
@@ -307,8 +330,9 @@ async function main() {
       await waitForNode();
     }
 
-    // Deploy contract
-    await deployContract();
+    // Contract deployment is now manual - use the UI to deploy
+    log("\n📝 Contract deployment is manual", "cyan");
+    log("   Use the 'Deploy' tab in the UI to deploy V1 or V2", "yellow");
 
     // Start UI
     await startUI();
@@ -318,7 +342,9 @@ async function main() {
     log("=".repeat(50), "cyan");
     log(`\n📊 Dashboard: http://localhost:${UI_PORT}`, "blue");
     log(`🔗 Hardhat Node: http://127.0.0.1:${HARDHAT_PORT}`, "blue");
-    log("\nPress Ctrl+C to stop everything\n", "yellow");
+    log("\n📝 Next step: Deploy contract from the UI 'Deploy' tab", "yellow");
+    log("   You have full control - choose V1 or V2 when ready!\n", "yellow");
+    log("Press Ctrl+C to stop everything\n", "yellow");
 
   } catch (error) {
     log(`\n❌ Error: ${error.message}`, "red");
